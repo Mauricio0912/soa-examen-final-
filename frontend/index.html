@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plataforma Academica - DMAF</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: Arial, sans-serif; background: #f5f5f5; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1 { text-align: center; color: #333; margin-bottom: 30px; }
+        .modules { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .module { background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .module h2 { color: #2196F3; margin-bottom: 15px; border-bottom: 2px solid #2196F3; padding-bottom: 10px; }
+        .module.soap h2 { color: #4CAF50; border-color: #4CAF50; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; color: #555; }
+        input, select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
+        button { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; margin-right: 10px; margin-bottom: 10px; }
+        .btn-primary { background: #2196F3; color: white; }
+        .btn-success { background: #4CAF50; color: white; }
+        .btn-danger { background: #f44336; color: white; }
+        .btn-warning { background: #ff9800; color: white; }
+        button:hover { opacity: 0.9; }
+        .result { margin-top: 15px; padding: 15px; background: #f9f9f9; border-radius: 4px; border-left: 4px solid #2196F3; min-height: 50px; }
+        .module.soap .result { border-left-color: #4CAF50; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background: #f5f5f5; }
+        .error { color: #f44336; }
+        .success { color: #4CAF50; }
+        @media (max-width: 768px) { .modules { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Plataforma Academica Unificada</h1>
+
+        <div class="modules">
+            <!-- MODULO SOAP - ALUMNOS -->
+            <div class="module soap">
+                <h2>Modulo Alumno (SOAP)</h2>
+
+                <h3>Registrar Alumno</h3>
+                <div class="form-group">
+                    <label>Nombre del Alumno:</label>
+                    <input type="text" id="alumnoNombre" placeholder="Ingrese nombre">
+                </div>
+                <button class="btn-success" onclick="crearAlumno()">Registrar Alumno</button>
+
+                <hr style="margin: 20px 0;">
+
+                <h3>Consultar y Eliminar Alumnos</h3>
+                <div class="form-group">
+                    <label>Buscar por Matricula:</label>
+                    <input type="text" id="buscarMatricula" placeholder="Ej: k1">
+                </div>
+                <button class="btn-primary" onclick="buscarPorMatricula()">Buscar</button>
+                <button class="btn-success" onclick="listarAlumnos()">Listar Todos</button>
+
+                <div class="form-group" style="margin-top: 15px;">
+                    <label>IDs a Eliminar (minimo 2, separados por coma):</label>
+                    <input type="text" id="idsEliminar" placeholder="Ej: 1,2,3">
+                </div>
+                <button class="btn-danger" onclick="eliminarAlumnos()">Eliminar Alumnos</button>
+
+                <div class="result" id="resultadoSoap">Resultado aparecera aqui...</div>
+            </div>
+
+            <!-- MODULO REST - CURSOS -->
+            <div class="module">
+                <h2>Modulo Curso (REST)</h2>
+
+                <h3>Registrar/Editar Curso</h3>
+                <div class="form-group">
+                    <label>ID (solo para editar):</label>
+                    <input type="number" id="cursoId" placeholder="Dejar vacio para crear nuevo">
+                </div>
+                <div class="form-group">
+                    <label>Nombre del Curso:</label>
+                    <input type="text" id="cursoNombre" placeholder="Ingrese nombre">
+                </div>
+                <div class="form-group">
+                    <label>Descripcion:</label>
+                    <input type="text" id="cursoDescripcion" placeholder="Ingrese descripcion">
+                </div>
+                <div class="form-group">
+                    <label>Fecha Inicio:</label>
+                    <input type="date" id="cursoFechaInicio">
+                </div>
+                <div class="form-group">
+                    <label>Fecha Fin:</label>
+                    <input type="date" id="cursoFechaFin">
+                </div>
+                <button class="btn-success" onclick="guardarCurso()">Guardar Curso</button>
+                <button class="btn-primary" onclick="listarCursos()">Listar Todos</button>
+
+                <hr style="margin: 20px 0;">
+
+                <h3>Buscar Curso</h3>
+                <div class="form-group">
+                    <label>Buscar por Nombre:</label>
+                    <input type="text" id="buscarNombreCurso" placeholder="Nombre del curso">
+                </div>
+                <button class="btn-primary" onclick="buscarCursoPorNombre()">Buscar por Nombre</button>
+
+                <div class="form-group" style="margin-top: 10px;">
+                    <label>Buscar por Fecha Inicio:</label>
+                    <input type="date" id="buscarFechaCurso">
+                </div>
+                <button class="btn-primary" onclick="buscarCursoPorFecha()">Buscar por Fecha</button>
+
+                <div class="result" id="resultadoRest">Resultado aparecera aqui...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SOAP_URL = 'http://localhost:8002/soap/';
+        const REST_URL = 'http://localhost:8081/api/cursos';
+
+        // ============ FUNCIONES SOAP ============
+
+        async function enviarSoap(operacion, contenido) {
+            const xml = `<?xml version="1.0" encoding="UTF-8"?>
+                <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+                               xmlns:tns="http://alumno.soap.service/">
+                    <soap:Body>
+                        <tns:${operacion}>${contenido}</tns:${operacion}>
+                    </soap:Body>
+                </soap:Envelope>`;
+
+            try {
+                const response = await fetch(SOAP_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/xml; charset=utf-8' },
+                    body: xml
+                });
+                return await response.text();
+            } catch (error) {
+                throw new Error('Error conectando con servicio SOAP: ' + error.message);
+            }
+        }
+
+        function parsearRespuestaSoap(xmlString) {
+            const parser = new DOMParser();
+            const xml = parser.parseFromString(xmlString, 'text/xml');
+
+            // Verificar si hay error
+            const fault = xml.getElementsByTagName('faultstring')[0];
+            if (fault) {
+                return { error: fault.textContent };
+            }
+
+            return xml;
+        }
+
+        async function crearAlumno() {
+            const nombre = document.getElementById('alumnoNombre').value;
+            if (!nombre) {
+                mostrarResultadoSoap('Por favor ingrese un nombre', true);
+                return;
+            }
+
+            try {
+                const response = await enviarSoap('CrearAlumno', `<tns:nombre>${nombre}</tns:nombre>`);
+                const xml = parsearRespuestaSoap(response);
+
+                if (xml.error) {
+                    mostrarResultadoSoap(xml.error, true);
+                    return;
+                }
+
+                const id = xml.getElementsByTagNameNS('*', 'id')[0]?.textContent || '';
+                const matricula = xml.getElementsByTagNameNS('*', 'matricula')[0]?.textContent || '';
+                const nombreResp = xml.getElementsByTagNameNS('*', 'nombre')[0]?.textContent || '';
+
+                mostrarResultadoSoap(`Alumno creado exitosamente:<br>ID: ${id}<br>Matricula: ${matricula}<br>Nombre: ${nombreResp}`);
+                document.getElementById('alumnoNombre').value = '';
+            } catch (error) {
+                mostrarResultadoSoap(error.message, true);
+            }
+        }
+
+        async function buscarPorMatricula() {
+            const matricula = document.getElementById('buscarMatricula').value;
+            if (!matricula) {
+                mostrarResultadoSoap('Por favor ingrese una matricula', true);
+                return;
+            }
+
+            try {
+                const response = await enviarSoap('ObtenerPorMatricula', `<tns:matricula>${matricula}</tns:matricula>`);
+                const xml = parsearRespuestaSoap(response);
+
+                if (xml.error) {
+                    mostrarResultadoSoap(xml.error, true);
+                    return;
+                }
+
+                const id = xml.getElementsByTagNameNS('*', 'id')[0]?.textContent || '';
+                const mat = xml.getElementsByTagNameNS('*', 'matricula')[0]?.textContent || '';
+                const nombre = xml.getElementsByTagNameNS('*', 'nombre')[0]?.textContent || '';
+
+                mostrarResultadoSoap(`<strong>Alumno encontrado:</strong><br>ID: ${id}<br>Matricula: ${mat}<br>Nombre: ${nombre}`);
+            } catch (error) {
+                mostrarResultadoSoap(error.message, true);
+            }
+        }
+
+        async function listarAlumnos() {
+            try {
+                const response = await enviarSoap('ListarAlumnos', '');
+                const xml = parsearRespuestaSoap(response);
+
+                if (xml.error) {
+                    mostrarResultadoSoap(xml.error, true);
+                    return;
+                }
+
+                const alumnos = xml.getElementsByTagNameNS('*', 'Alumno');
+
+                if (alumnos.length === 0) {
+                    mostrarResultadoSoap('No hay alumnos registrados');
+                    return;
+                }
+
+                let html = '<table><tr><th>ID</th><th>Matricula</th><th>Nombre</th></tr>';
+                for (let alumno of alumnos) {
+                    const id = alumno.getElementsByTagNameNS('*', 'id')[0]?.textContent || '';
+                    const matricula = alumno.getElementsByTagNameNS('*', 'matricula')[0]?.textContent || '';
+                    const nombre = alumno.getElementsByTagNameNS('*', 'nombre')[0]?.textContent || '';
+                    html += `<tr><td>${id}</td><td>${matricula}</td><td>${nombre}</td></tr>`;
+                }
+                html += '</table>';
+                mostrarResultadoSoap(html);
+            } catch (error) {
+                mostrarResultadoSoap(error.message, true);
+            }
+        }
+
+        async function eliminarAlumnos() {
+            const idsStr = document.getElementById('idsEliminar').value;
+            if (!idsStr) {
+                mostrarResultadoSoap('Por favor ingrese los IDs a eliminar', true);
+                return;
+            }
+
+            const ids = idsStr.split(',').map(id => id.trim()).filter(id => id);
+
+            if (ids.length < 2) {
+                mostrarResultadoSoap('Debe ingresar al menos 2 IDs para eliminar', true);
+                return;
+            }
+
+            try {
+                let idsXml = ids.map(id => `<tns:id>${id}</tns:id>`).join('');
+                const response = await enviarSoap('EliminarAlumnos', `<tns:ids>${idsXml}</tns:ids>`);
+                const xml = parsearRespuestaSoap(response);
+
+                if (xml.error) {
+                    mostrarResultadoSoap(xml.error, true);
+                    return;
+                }
+
+                const mensaje = xml.getElementsByTagNameNS('*', 'message')[0]?.textContent || 'Alumnos eliminados';
+                mostrarResultadoSoap(mensaje);
+                document.getElementById('idsEliminar').value = '';
+            } catch (error) {
+                mostrarResultadoSoap(error.message, true);
+            }
+        }
+
+        function mostrarResultadoSoap(mensaje, esError = false) {
+            const div = document.getElementById('resultadoSoap');
+            div.innerHTML = mensaje;
+            div.className = 'result ' + (esError ? 'error' : 'success');
+        }
+
+        // ============ FUNCIONES REST ============
+
+        async function guardarCurso() {
+            const id = document.getElementById('cursoId').value;
+            const nombre = document.getElementById('cursoNombre').value;
+            const descripcion = document.getElementById('cursoDescripcion').value;
+            const fechaInicio = document.getElementById('cursoFechaInicio').value;
+            const fechaFin = document.getElementById('cursoFechaFin').value;
+
+            if (!nombre || !descripcion || !fechaInicio) {
+                mostrarResultadoRest('Por favor complete nombre, descripcion y fecha inicio', true);
+                return;
+            }
+
+            const curso = { nombre, descripcion, fechaInicio, fechaFin: fechaFin || null };
+
+            try {
+                let response;
+                if (id) {
+                    // Editar
+                    response = await fetch(`${REST_URL}/${id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(curso)
+                    });
+                } else {
+                    // Crear
+                    response = await fetch(REST_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(curso)
+                    });
+                }
+
+                if (!response.ok) {
+                    throw new Error('Error al guardar el curso');
+                }
+
+                const data = await response.json();
+                mostrarResultadoRest(`Curso ${id ? 'actualizado' : 'creado'} exitosamente:<br>ID: ${data.id}<br>Nombre: ${data.nombre}`);
+                limpiarFormularioCurso();
+            } catch (error) {
+                mostrarResultadoRest(error.message, true);
+            }
+        }
+
+        async function listarCursos() {
+            try {
+                const response = await fetch(REST_URL);
+                const cursos = await response.json();
+
+                if (cursos.length === 0) {
+                    mostrarResultadoRest('No hay cursos registrados');
+                    return;
+                }
+
+                let html = '<table><tr><th>ID</th><th>Nombre</th><th>Fecha Inicio</th><th>Acciones</th></tr>';
+                for (let curso of cursos) {
+                    html += `<tr>
+                        <td>${curso.id}</td>
+                        <td>${curso.nombre}</td>
+                        <td>${curso.fechaInicio}</td>
+                        <td><button class="btn-warning" onclick="cargarCurso(${curso.id})">Editar</button></td>
+                    </tr>`;
+                }
+                html += '</table>';
+                mostrarResultadoRest(html);
+            } catch (error) {
+                mostrarResultadoRest('Error conectando con API REST: ' + error.message, true);
+            }
+        }
+
+        async function cargarCurso(id) {
+            try {
+                const response = await fetch(`${REST_URL}/${id}`);
+                const curso = await response.json();
+
+                document.getElementById('cursoId').value = curso.id;
+                document.getElementById('cursoNombre').value = curso.nombre;
+                document.getElementById('cursoDescripcion').value = curso.descripcion;
+                document.getElementById('cursoFechaInicio').value = curso.fechaInicio;
+                document.getElementById('cursoFechaFin').value = curso.fechaFin || '';
+
+                mostrarResultadoRest('Curso cargado para edicion');
+            } catch (error) {
+                mostrarResultadoRest(error.message, true);
+            }
+        }
+
+        async function buscarCursoPorNombre() {
+            const nombre = document.getElementById('buscarNombreCurso').value;
+            if (!nombre) {
+                mostrarResultadoRest('Ingrese un nombre para buscar', true);
+                return;
+            }
+
+            try {
+                const response = await fetch(`${REST_URL}/buscar/nombre?nombre=${encodeURIComponent(nombre)}`);
+                const cursos = await response.json();
+                mostrarCursosEnTabla(cursos);
+            } catch (error) {
+                mostrarResultadoRest(error.message, true);
+            }
+        }
+
+        async function buscarCursoPorFecha() {
+            const fecha = document.getElementById('buscarFechaCurso').value;
+            if (!fecha) {
+                mostrarResultadoRest('Seleccione una fecha para buscar', true);
+                return;
+            }
+
+            try {
+                const response = await fetch(`${REST_URL}/buscar/fecha?fecha=${fecha}`);
+                const cursos = await response.json();
+                mostrarCursosEnTabla(cursos);
+            } catch (error) {
+                mostrarResultadoRest(error.message, true);
+            }
+        }
+
+        function mostrarCursosEnTabla(cursos) {
+            if (cursos.length === 0) {
+                mostrarResultadoRest('No se encontraron cursos');
+                return;
+            }
+
+            let html = '<table><tr><th>ID</th><th>Nombre</th><th>Descripcion</th><th>Fecha Inicio</th><th>Acciones</th></tr>';
+            for (let curso of cursos) {
+                html += `<tr>
+                    <td>${curso.id}</td>
+                    <td>${curso.nombre}</td>
+                    <td>${curso.descripcion}</td>
+                    <td>${curso.fechaInicio}</td>
+                    <td><button class="btn-warning" onclick="cargarCurso(${curso.id})">Editar</button></td>
+                </tr>`;
+            }
+            html += '</table>';
+            mostrarResultadoRest(html);
+        }
+
+        function limpiarFormularioCurso() {
+            document.getElementById('cursoId').value = '';
+            document.getElementById('cursoNombre').value = '';
+            document.getElementById('cursoDescripcion').value = '';
+            document.getElementById('cursoFechaInicio').value = '';
+            document.getElementById('cursoFechaFin').value = '';
+        }
+
+        function mostrarResultadoRest(mensaje, esError = false) {
+            const div = document.getElementById('resultadoRest');
+            div.innerHTML = mensaje;
+            div.className = 'result ' + (esError ? 'error' : 'success');
+        }
+    </script>
+</body>
+</html>
