@@ -1,0 +1,6 @@
+com\dmaf\apirest\controller\CursoController.class
+com\dmaf\apirest\repository\CursoRepository.class
+com\dmaf\apirest\ServletInitializer.class
+com\dmaf\apirest\model\Curso.class
+com\dmaf\apirest\service\CursoService.class
+com\dmaf\apirest\ApirestApplication.class
